@@ -30,9 +30,9 @@ These are the prompts I used with Claude AI to complete the challenge in under 2
 - [x] Add comprehensive error handling
 
 ### ⏳ Step 4: Demo & Documentation (PENDING)
-- [ ] Test headful mode for demo
-- [ ] Create timeproof screenshot
-- [ ] Prepare Loom demo script
+- [x] Test headful mode for demo
+- [x] Create timeproof screenshot
+- [x] Prepare Loom demo script
 
 ---
 

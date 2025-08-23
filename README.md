@@ -11,8 +11,8 @@ The script navigates the demo site (without API), scrapes invoices across all pa
 
 ## Setup
 ```bash
-git clone <this-repo>
-cd zoho-invoice-collector
+git clone https://github.com/Buffnet/Zoho-Books
+cd Zoho-Books
 npm install
 npx playwright install chromium
 ```
