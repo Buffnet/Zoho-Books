@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zoho Invoice AI Analyzer</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+        input[type="text"] { width: 70%; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { background: white; padding: 15px; margin: 15px 0; border-radius: 4px; white-space: pre-line; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>FREE Zoho Invoice AI Analyzer</h1>
+    <div class="container">
+        <p>Ask questions about your invoice data:</p>
+
+        <input type="text" id="queryInput" placeholder="What is the total revenue?" value="What is the total revenue?">
+        <button onclick="analyzeInvoices()">Analyze</button>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function analyzeInvoices() {
+            const query = document.getElementById('queryInput').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!query.trim()) {
+                alert('Please enter a question!');
+                return;
+            }
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">Analyzing invoices...</div>';
+
+            try {
+                const response = await fetch('http://localhost:8000/analyze-free', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>Analysis Results:</h3>
+                        <div>${data.analysis}</div>
+                        <hr>
+                        <small>Analyzed ${data.invoices_analyzed} invoices | Query ID: ${data.query_hash}</small>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div style="color: red;">Error: ${data.detail || 'Analysis failed'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div style="color: red;">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeInvoices();
+            }
+        });
+    </script>
+
+    <hr>
+    <p><strong>Sample Questions (click to try):</strong></p>
+    <ul>
+        <li onclick="document.getElementById('queryInput').value='What is the total revenue?'; analyzeInvoices();" style="cursor: pointer; color: blue; text-decoration: underline;"> What is the total revenue?</li>
+        <li onclick="document.getElementById('queryInput').value='Who are the top customers?'; analyzeInvoices();" style="cursor: pointer; color: blue; text-decoration: underline;">Who are the top customers?</li>
+        <li onclick="document.getElementById('queryInput').value='How many invoices are paid?'; analyzeInvoices();" style="cursor: pointer; color: blue; text-decoration: underline;">How many invoices are paid?</li>
+        <li onclick="document.getElementById('queryInput').value='What is the payment status?'; analyzeInvoices();" style="cursor: pointer; color: blue; text-decoration: underline;">What is the payment status?</li>
+    </ul>
+</body>
+</html>

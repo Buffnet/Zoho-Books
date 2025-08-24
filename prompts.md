@@ -29,10 +29,18 @@ These are the prompts I used with Claude AI to complete the challenge in under 2
 - [x] Verify idempotent CSV overwrites
 - [x] Add comprehensive error handling
 
-### ⏳ Step 4: Demo & Documentation (PENDING)
+### ✅ Step 4: Demo & Documentation (COMPLETED)
 - [x] Test headful mode for demo
 - [x] Create timeproof screenshot
 - [x] Prepare Loom demo script
+
+### ✅ Step 5: FastAPI LLM Endpoint (COMPLETED)
+- [x] Set up FastAPI project structure with Python dependencies
+- [x] Create LLM endpoint that processes Zoho CSV data and returns JSON
+- [x] Add retry mechanism for transient errors using tenacity
+- [x] Implement idempotency guard (same input → same output without re-processing)
+- [x] Create simple README section with FastAPI run commands
+- [x] Test the endpoint works end-to-end
 
 ---
 
@@ -116,3 +124,16 @@ Write a ≤3-minute Loom narration script and checklist that shows:
 Return a bullet list narration + one-liner for timestamped screenshot (Linux/macOS).
 ```
 **How it helped:** Provided a ready demo script and screenshot command with no wasted time.
+
+---
+
+## Prompt 6: FastAPI LLM Endpoint (30–45 min)
+```
+Hi! I have another small task. Do you have an idea how we can do that? 
+One last async checkbox so we're fully aligned with our stack (kept tiny and time-boxed 30–45 min): 
+• Stand up a small FastAPI endpoint that calls an LLM and returns JSON (any simple example is fine — generic, or reusing your Zoho CSV; your choice). 
+• Add minimal production hygiene: basic retry on transient errors and a simple idempotency guard (same input → same output without re-processing). 
+• Record a ≤60-sec Loom in Cursor or Claude Code (Copilot/Cody also fine) with the AI suggestions visible. 
+• Share the repo + a 1-minute README (run commands). Send the Loom + repo when ready, and two 15-min slots in the next 48h for a quick debrief.
+```
+**How it helped:** Extended the existing Zoho scraper with a production-ready API endpoint featuring LLM analysis, retry logic, and caching for a complete data pipeline demo.

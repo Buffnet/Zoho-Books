@@ -1,0 +1,7 @@
+invoice_id,customer,amount,paid_at,status
+"Invoice2","Gilberto Lang","19962","16 May 2025","Partially Paid"
+"Invoice3","Gilberto Lang","171879","16 May 2025","Paid"
+"Invoice9","Norris","929217","16 May 2025","Partially Paid"
+"Invoice11","Nadine Deckow II","19962","16 May 2025","Partially Paid"
+"Invoice20","Sadie Rippin III","19962","16 May 2025","Partially Paid"
+"Invoice24","Candace","788613","16 May 2025","Paid"
