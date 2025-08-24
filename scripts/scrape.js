@@ -82,107 +82,162 @@ async function scrapeInvoices() {
         console.log('- Sample rows:', pageInfo.sampleRowsText);
       }
       
-      // Extract invoices from current page
+      // Extract invoices from current page using stable column selectors
       const pageInvoices = await page.evaluate(() => {
-        const rows = [];
+        const results = {
+          invoices: [],
+          schemaInfo: {
+            totalRows: 0,
+            parsedRows: 0,
+            errors: [],
+            columnCount: 0,
+            hasExpectedStructure: false
+          }
+        };
         
-        // Get table rows
-        const tableRows = document.querySelectorAll('table tbody tr');
+        // Get table and analyze structure
+        const table = document.querySelector('table');
+        if (!table) {
+          results.schemaInfo.errors.push('No table found');
+          return results;
+        }
+        
+        const tableRows = table.querySelectorAll('tbody tr');
+        results.schemaInfo.totalRows = tableRows.length;
         console.log('Found rows:', tableRows.length);
         
+        // Analyze table structure from first row
+        if (tableRows.length > 0) {
+          const firstRow = tableRows[0];
+          const cells = firstRow.querySelectorAll('td, th');
+          results.schemaInfo.columnCount = cells.length;
+          results.schemaInfo.hasExpectedStructure = cells.length >= 4; // Minimum expected columns
+          
+          console.log('Table structure:', {
+            columns: cells.length,
+            sampleCellTexts: Array.from(cells).slice(0, 5).map(cell => cell.textContent?.trim())
+          });
+        }
+        
+        // Process each row using stable column-based extraction
         tableRows.forEach((row, index) => {
           try {
-            // Get the full text content of the row
-            const rowText = row.textContent.trim();
-            console.log(`Row ${index + 1}: "${rowText}"`);
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 4) {
+              results.schemaInfo.errors.push(`Row ${index + 1}: Insufficient columns (${cells.length})`);
+              return;
+            }
             
-            // Check if row contains "Paid" or "Partially Paid"
-            if (rowText.toLowerCase().includes('paid')) {
-              
-              // Parse the row text - expected format:
-              // "17 Apr 2025Invoice2    Dr. Lawrence Robel Partially Paid14 Jan 2026$43404$43394"
-              
-              // Try to extract invoice ID (InvoiceN pattern)
-              const invoiceMatch = rowText.match(/Invoice(\d+)/);
-              const invoiceId = invoiceMatch ? invoiceMatch[0] : '';
-              
-              // Extract status with fallback patterns
-              const statusPatterns = [
-                /(Draft|Paid|Partially Paid|Overdue|Pending|Approved|Void|Open)/i,
-                /status[:\s]+(Draft|Paid|Partially Paid|Overdue|Pending|Approved|Void|Open)/i
-              ];
-              
-              let status = '';
-              let statusMatch = null;
-              for (const pattern of statusPatterns) {
-                statusMatch = rowText.match(pattern);
-                if (statusMatch) {
-                  status = statusMatch[1] || statusMatch[0];
-                  break;
-                }
-              }
-              
-              // Extract customer name with improved logic
-              let customer = '';
-              if (invoiceMatch && statusMatch) {
-                const afterInvoice = rowText.substring(rowText.indexOf(invoiceMatch[0]) + invoiceMatch[0].length).trim();
-                const statusIndex = afterInvoice.search(statusMatch[0]);
-                if (statusIndex > 0) {
-                  customer = afterInvoice.substring(0, statusIndex).trim();
-                  // Clean up customer name (remove extra spaces, special chars)
-                  customer = customer.replace(/\s+/g, ' ').replace(/[^\w\s.-]/g, '').trim();
-                }
-              }
-              
-              // Extract amount with improved currency normalization
-              const amountMatches = rowText.match(/\$[\d,]+(\.\d{2})?/g);
-              let amount = '';
-              if (amountMatches && amountMatches.length > 0) {
-                // Take the last amount (usually the balance due)
-                amount = amountMatches[amountMatches.length - 1]
-                  .replace(/[$,]/g, '')  // Remove $ and commas
-                  .replace(/\.00$/, '')  // Remove trailing .00
-                  .trim();
-              }
-              
-              // Extract date with multiple format support
-              let paidAt = '';
-              const datePatterns = [
-                /\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/,
-                /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/,
-                /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/
-              ];
-              
-              for (const pattern of datePatterns) {
-                const dateMatch = rowText.match(pattern);
-                if (dateMatch) {
-                  paidAt = dateMatch[0];
-                  break;
-                }
-              }
-              
-              console.log('Parsed data:', { invoiceId, customer, status, amount, paidAt });
-              
-              if (invoiceId && customer && status.toLowerCase().includes('paid')) {
-                rows.push({
-                  invoice_id: invoiceId,
-                  customer: customer,
-                  amount: amount,
-                  paid_at: paidAt,
-                  status: status
-                });
+            // Extract data using column positions (more stable than regex)
+            // Common table structure: [Date, Invoice, Customer, Status, Amount, ...]
+            let invoiceId = '', customer = '', status = '', amount = '', paidAt = '';
+            
+            // Try to find invoice ID in any cell (fallback to regex if needed)
+            for (let i = 0; i < Math.min(cells.length, 6); i++) {
+              const cellText = cells[i].textContent?.trim() || '';
+              const invoiceMatch = cellText.match(/Invoice\d+/i);
+              if (invoiceMatch) {
+                invoiceId = invoiceMatch[0];
+                break;
               }
             }
+            
+            // Try to find status in any cell
+            for (let i = 0; i < Math.min(cells.length, 6); i++) {
+              const cellText = cells[i].textContent?.trim() || '';
+              if (cellText.match(/(Paid|Partially Paid|Draft|Overdue|Pending|Approved|Void|Open)/i)) {
+                status = cellText.match(/(Paid|Partially Paid|Draft|Overdue|Pending|Approved|Void|Open)/i)[0];
+                break;
+              }
+            }
+            
+            // Try to find amount in any cell
+            for (let i = 0; i < Math.min(cells.length, 6); i++) {
+              const cellText = cells[i].textContent?.trim() || '';
+              const amountMatch = cellText.match(/\$?[\d,]+(?:\.\d{2})?/);
+              if (amountMatch && parseFloat(amountMatch[0].replace(/[$,]/g, '')) > 0) {
+                amount = amountMatch[0].replace(/[$,]/g, '').replace(/\.00$/, '');
+                break;
+              }
+            }
+            
+            // Try to find customer name (usually longest non-numeric text)
+            let longestText = '';
+            for (let i = 0; i < Math.min(cells.length, 6); i++) {
+              const cellText = cells[i].textContent?.trim() || '';
+              // Skip cells that look like invoices, amounts, dates, or status
+              if (!cellText.match(/Invoice\d+|\$[\d,]+|\d{1,2}[\s\/\-]|^(Paid|Partially Paid|Draft|Overdue)$/i)) {
+                if (cellText.length > longestText.length && cellText.length > 3) {
+                  longestText = cellText;
+                }
+              }
+            }
+            customer = longestText.replace(/[^\w\s.-]/g, '').trim();
+            
+            // Try to find date in any cell
+            for (let i = 0; i < Math.min(cells.length, 6); i++) {
+              const cellText = cells[i].textContent?.trim() || '';
+              const dateMatch = cellText.match(/\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}|\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/);
+              if (dateMatch) {
+                paidAt = dateMatch[0];
+                break;
+              }
+            }
+            
+            console.log(`Row ${index + 1} parsed:`, { invoiceId, customer, status, amount, paidAt });
+            
+            // Validate required fields and filter for paid invoices
+            if (invoiceId && customer && status && status.toLowerCase().includes('paid')) {
+              results.invoices.push({
+                invoice_id: invoiceId,
+                customer: customer,
+                amount: amount || '0',
+                paid_at: paidAt,
+                status: status
+              });
+              results.schemaInfo.parsedRows++;
+            } else if (status && status.toLowerCase().includes('paid')) {
+              // Track failed parses for paid invoices
+              results.schemaInfo.errors.push(`Row ${index + 1}: Missing required fields - ID:${!!invoiceId} Customer:${!!customer} Status:${!!status}`);
+            }
+            
           } catch (error) {
-            console.log('Error processing row:', error.message);
+            results.schemaInfo.errors.push(`Row ${index + 1}: ${error.message}`);
           }
         });
         
-        return rows;
+        return results;
       });
       
-      invoices.push(...pageInvoices);
-      console.log(`✅ Found ${pageInvoices.length} paid invoices on page ${currentPage}`);
+      // Process results and detect schema drift
+      const { invoices: newInvoices, schemaInfo } = pageInvoices;
+      
+      // Schema drift detection
+      if (schemaInfo.errors.length > 3) {
+        console.warn(`⚠️ HIGH ERROR RATE: ${schemaInfo.errors.length} errors on page ${currentPage}`);
+        console.warn('First 3 errors:', schemaInfo.errors.slice(0, 3));
+      }
+      
+      if (schemaInfo.totalRows > 0 && schemaInfo.parsedRows === 0) {
+        console.error('🚨 SCHEMA DRIFT ALERT: Found rows but parsed 0 paid invoices');
+        console.error('Schema info:', schemaInfo);
+        throw new Error('Schema drift detected: parsing completely failed');
+      }
+      
+      if (!schemaInfo.hasExpectedStructure) {
+        console.warn(`⚠️ Unexpected table structure: ${schemaInfo.columnCount} columns`);
+      }
+      
+      // Deduplicate by invoice_id before adding
+      const existingIds = new Set(invoices.map(inv => inv.invoice_id));
+      const uniqueNewInvoices = newInvoices.filter(inv => !existingIds.has(inv.invoice_id));
+      
+      if (newInvoices.length !== uniqueNewInvoices.length) {
+        console.log(`🔄 Deduped ${newInvoices.length - uniqueNewInvoices.length} duplicate invoices`);
+      }
+      
+      invoices.push(...uniqueNewInvoices);
+      console.log(`✅ Found ${uniqueNewInvoices.length} new paid invoices on page ${currentPage} (${schemaInfo.parsedRows} total parsed, ${schemaInfo.errors.length} errors)`);
       
       // Check for next page button and click if exists
       const nextButton = await page.$('button:has-text("Next"), .pagination-next, [aria-label="Next"]');
@@ -198,6 +253,21 @@ async function scrapeInvoices() {
     }
     
     console.log(`🎉 Total invoices collected: ${invoices.length}`);
+    
+    // Final validation: fail fast if required columns are missing
+    const invalidInvoices = invoices.filter(inv => 
+      !inv.invoice_id || !inv.customer || !inv.status
+    );
+    
+    if (invalidInvoices.length > 0) {
+      console.error(`🚨 VALIDATION FAILED: ${invalidInvoices.length} invoices missing required fields`);
+      console.error('Sample invalid:', invalidInvoices.slice(0, 3));
+      throw new Error(`Data validation failed: ${invalidInvoices.length} invoices have missing required fields`);
+    }
+    
+    if (invoices.length === 0) {
+      console.warn('🚨 SCHEMA DRIFT ALERT: No paid invoices found - possible DOM structure change');
+    }
     
     // Generate CSV
     if (invoices.length > 0) {

@@ -42,6 +42,14 @@ These are the prompts I used with Claude AI to complete the challenge in under 2
 - [x] Create simple README section with FastAPI run commands
 - [x] Test the endpoint works end-to-end
 
+### ✅ Step 6: Scraper Hardening & Schema Drift Detection (COMPLETED)
+- [x] Replace brittle text-based parsing with stable column selectors
+- [x] Add schema drift detection (error rate monitoring, structure validation)
+- [x] Implement deduplication by invoice_id
+- [x] Add fail-fast validation for required columns
+- [x] Add comprehensive error tracking and reporting
+- [x] Improve robustness against DOM structure changes
+
 ---
 
 ## Prompt 1: Planning & Setup (5 min)
@@ -137,3 +145,20 @@ One last async checkbox so we're fully aligned with our stack (kept tiny and tim
 • Share the repo + a 1-minute README (run commands). Send the Loom + repo when ready, and two 15-min slots in the next 48h for a quick debrief.
 ```
 **How it helped:** Extended the existing Zoho scraper with a production-ready API endpoint featuring LLM analysis, retry logic, and caching for a complete data pipeline demo.
+
+---
+
+## Prompt 7: Scraper Hardening & Production Readiness (20–30 min)
+```
+ok, perfect. Now we need to make a refactor of file @scripts/scrape.js 
+It is working now, but. 
+the current parsing grabs row.textContent and regexes status/customer/amount. That's brittle if Zoho tweaks the DOM.
+
+How would you harden it? For example:
+• Anchor on stable column selectors or attributes (e.g., table tbody tr td:nth-child(...), data-*) instead of free-text.
+• Add a tiny snapshot/unit test on saved invoice HTML + a "schema-drift" alert (e.g., paid rows drop to 0 or parse error rate >3%).
+• Dedupe by invoice_id and fail fast if required columns aren't found.
+
+Also please update @prompts.md with this new refactor step
+```
+**How it helped:** Transformed brittle text-parsing scraper into robust column-based parser with schema drift detection, deduplication, and fail-fast validation - making it production-ready against DOM changes.
