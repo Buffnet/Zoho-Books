@@ -148,7 +148,7 @@ One last async checkbox so we're fully aligned with our stack (kept tiny and tim
 
 ---
 
-## Prompt 7: Scraper Hardening & Production Readiness (20–30 min)
+## Prompt 7: Scraper Hardening & Production Readiness (COMPLETED)
 ```
 ok, perfect. Now we need to make a refactor of file @scripts/scrape.js 
 It is working now, but. 
@@ -162,3 +162,16 @@ How would you harden it? For example:
 Also please update @prompts.md with this new refactor step
 ```
 **How it helped:** Transformed brittle text-parsing scraper into robust column-based parser with schema drift detection, deduplication, and fail-fast validation - making it production-ready against DOM changes.
+
+**Production improvements implemented in scripts/scrape-v2.js:**
+- [x] Locator API instead of CSS selectors with :has-text()
+- [x] Replace networkidle with UI-driven waits  
+- [x] Add iframe detection and handling
+- [x] Replace timeouts with deterministic waits
+- [x] Wire up page console logging for debugging
+- [x] Implement proper CSV escaping for quotes/commas/newlines
+- [x] Use role-based navigation selectors 
+- [x] Add screenshot and HTML capture on schema drift
+- [x] Improve invoice parsing with cell order and data attributes
+- [x] Use semantic pagination with proper ARIA roles
+- [x] Guard browser.close() in finally block
