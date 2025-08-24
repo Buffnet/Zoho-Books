@@ -142,11 +142,12 @@ async function scrapeInvoices() {
               }
             }
             
-            // Try to find status in any cell
+            // Try to find paid status in any cell (filter early for efficiency)
             for (let i = 0; i < Math.min(cells.length, 6); i++) {
               const cellText = cells[i].textContent?.trim() || '';
-              if (cellText.match(/(Paid|Partially Paid|Draft|Overdue|Pending|Approved|Void|Open)/i)) {
-                status = cellText.match(/(Paid|Partially Paid|Draft|Overdue|Pending|Approved|Void|Open)/i)[0];
+              const paidMatch = cellText.match(/(Paid|Partially Paid)/i);
+              if (paidMatch) {
+                status = paidMatch[0];
                 break;
               }
             }
@@ -166,7 +167,7 @@ async function scrapeInvoices() {
             for (let i = 0; i < Math.min(cells.length, 6); i++) {
               const cellText = cells[i].textContent?.trim() || '';
               // Skip cells that look like invoices, amounts, dates, or status
-              if (!cellText.match(/Invoice\d+|\$[\d,]+|\d{1,2}[\s\/\-]|^(Paid|Partially Paid|Draft|Overdue)$/i)) {
+              if (!cellText.match(/Invoice\d+|\$[\d,]+|\d{1,2}[\s\/\-]|^(Paid|Partially Paid)$/i)) {
                 if (cellText.length > longestText.length && cellText.length > 3) {
                   longestText = cellText;
                 }
